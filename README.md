@@ -1,6 +1,17 @@
-# Pillow Talk – Relationship AI Coach
+# <img src="https://raw.githubusercontent.com/your-org/pillowtalk/main/assets/logo.png" alt="Pillowtalk Logo" width="60" style="vertical-align:middle; margin-right:10px;"/> Pillow Talk – Relationship AI Coach
 
-**Pillow Talk** is a private AI-powered relationship support platform designed for couples and individuals. It provides personalized, emotionally-aware guidance through separate conversations with each partner — helping them understand each other better, resolve conflicts, and grow closer without ever exposing one another’s private thoughts.
+## Overview
+Pillow Talk is a private AI-powered relationship support platform designed for couples and individuals. It provides personalized, emotionally-aware guidance through separate conversations with each partner — helping them understand each other better, resolve conflicts, and grow closer without ever exposing one another’s private thoughts.
+
+## Table of Contents
+- [Overview](#overview)
+- [Core Features](#-core-features)
+- [Tech Stack](#-tech-stack)
+- [Completed](#-completed)
+- [To Do](#-to-do)
+- [Vision](#-vision)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -68,3 +79,9 @@
 
 ## ✨ Vision
 Pillow Talk aims to become the safest space for couples to grow — using AI to reflect, understand, and reconnect, one conversation at a time.
+
+## Contributing
+We welcome contributions! Please fork the repository, create a feature branch, and submit a pull request. For major changes, open an issue first to discuss your ideas.
+
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
