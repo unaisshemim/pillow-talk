@@ -5,3 +5,4 @@ export interface Lobby {
   status: string;
   created_at: string;
 }
+

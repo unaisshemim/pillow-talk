@@ -3,8 +3,7 @@ import {
   createLobbyInDb,
   joinLobbyInDb,
   getLobbyByUserId,
-} from "../services/supabaseClient";
-import { logger } from "../logger";
+} from "../services/lobbyService";
 import { Lobby } from "../types/lobby";
 
 // POST /api/lobby/create
@@ -12,7 +11,7 @@ export const createLobby = async (req: Request, res: Response) => {
   try {
     const { creator_id } = req.body; // Assume user is authenticated and ID is provided
 
-    const lobby:Lobby = await createLobbyInDb(creator_id);
+    const lobby: Lobby = await createLobbyInDb(creator_id);
     console.log("Lobby created:", lobby);
 
     res.status(201).json({ lobby_id: lobby.id });
@@ -26,7 +25,7 @@ export const joinLobby = async (req: Request, res: Response) => {
   try {
     const { lobby_id, partner_id } = req.body; // Assume user is authenticated and ID is provided
     const result = await joinLobbyInDb(lobby_id, partner_id);
-  
+
     if (result) {
       res.status(200).json({ message: "Joined lobby" });
     } else {
@@ -41,7 +40,7 @@ export const joinLobby = async (req: Request, res: Response) => {
 export const getLobbyByUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const lobby = await getLobbyByUserId(userId);
+    const lobby: Lobby = await getLobbyByUserId(userId);
     if (lobby) {
       res.status(200).json(lobby);
     } else {
