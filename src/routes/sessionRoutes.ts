@@ -16,8 +16,8 @@ router.post("/start", startSession);
 // PATCH /session/:id/complete
 router.patch("/:id/complete", completeSession);
 
-// GET /sessions/:user_id
-router.get("/:user_id", getUserSessions);
+// GET /users/:user_id/sessions
+router.get("/users/:user_id", getUserSessions);
 
 // GET /session/:id
 router.get("/:id", getSession);
@@ -26,6 +26,6 @@ router.get("/:id", getSession);
 router.delete("/:id", deleteSession);
 
 // GET /sessions?lobby_id=
-router.get("/sessions", getLobbySessions);
+router.get("/lobby/:lobby_id", getLobbySessions);
 
 export default router;

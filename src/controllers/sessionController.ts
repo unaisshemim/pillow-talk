@@ -29,7 +29,7 @@ export const startSession = async (req: Request, res: Response) => {
       lobby_id = lobby.id;
       role = SessionRole.PARTNER;
     }
-    
+
     const session = await createSessionInDb({ lobby_id, user_id, role });
     res.status(201).json(session);
   } catch (error) {
@@ -41,7 +41,7 @@ export const startSession = async (req: Request, res: Response) => {
 export const completeSession = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     const { summary, tone, topics, embedding_id } = req.body;
     const session = await completeSessionInDb(id, {
       summary,
@@ -59,6 +59,7 @@ export const completeSession = async (req: Request, res: Response) => {
 export const getUserSessions = async (req: Request, res: Response) => {
   try {
     const { user_id } = req.params;
+
     const sessions = await getSessionsByUserId(user_id);
     res.status(200).json(sessions);
   } catch (error) {
@@ -92,7 +93,8 @@ export const deleteSession = async (req: Request, res: Response) => {
 // GET /sessions (by lobby_id)
 export const getLobbySessions = async (req: Request, res: Response) => {
   try {
-    const { lobby_id } = req.query;
+
+    const { lobby_id } = req.params;
     if (!lobby_id || typeof lobby_id !== "string") {
       return res.status(400).json({ error: "Missing or invalid lobby_id" });
     }

@@ -42,7 +42,8 @@ export async function getSessionsByUserId(user_id: string) {
     .from("sessions")
     .select("*")
     .eq("user_id", user_id)
-    .order("started_at", { ascending: false });
+    .order("created_at", { ascending: false });
+    console.log("getSessionsByUserId", { data, error });
   if (error) throw error;
   return data;
 }
@@ -68,7 +69,8 @@ export async function getSessionsByLobbyId(lobby_id: string) {
     .from("sessions")
     .select("*")
     .eq("lobby_id", lobby_id)
-    .order("started_at", { ascending: false });
+    .order("created_at", { ascending: false });
+  console.log("getSessionsByLobbyId", { data, error });
   if (error) throw error;
   return data;
 }
