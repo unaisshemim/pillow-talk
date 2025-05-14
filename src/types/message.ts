@@ -4,5 +4,5 @@ export interface Message {
   user_id: string;
   role: "user" | "assistant";
   content: string;
-  created_at: string;
+  timestamp: string;
 }

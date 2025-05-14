@@ -3,7 +3,8 @@ import {
   saveMessageToDb,
   getMessagesBySessionId,
 } from "../services/messageService";
-// import your OpenAI/GPT client here if available
+import { getAIReply } from "../services/aiService";
+import { Message } from "../types/message";
 
 // POST /api/message
 export const postMessage = async (req: Request, res: Response) => {
@@ -20,18 +21,19 @@ export const postMessage = async (req: Request, res: Response) => {
       content,
     });
 
-    // Call GPT/OpenAI here (placeholder)
-    const assistantReply = `AI reply to: ${content}`; // Replace with real GPT call
+    // Call GPT/OpenAI via aiService
+    const assistantReply = await getAIReply(content);
 
     // Save assistant message
-    const assistantMessage = await saveMessageToDb({
+    const agentMessage: Message = await saveMessageToDb({
       session_id,
       user_id,
-      role: "assistant",
+      role: "agent",
       content: assistantReply,
     });
+    const { id, content: agentContent, role, timestamp } = agentMessage;
 
-    res.status(201).json({ userMessage, assistantMessage });
+    res.status(201).json({ id, agentContent, role, timestamp });
   } catch (error) {
     res.status(500).json({ error: "Failed to process message" });
   }
