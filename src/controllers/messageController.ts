@@ -22,7 +22,7 @@ export const postMessage = async (req: Request, res: Response) => {
     });
 
     // Call GPT/OpenAI via aiService
-    const assistantReply = await getAIReply(content);
+    const assistantReply = await getAIReply(content, session_id);
 
     // Save assistant message
     const agentMessage: Message = await saveMessageToDb({

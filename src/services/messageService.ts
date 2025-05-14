@@ -20,7 +20,8 @@ export async function getMessagesBySessionId(session_id: string) {
     .from("messages")
     .select("*")
     .eq("session_id", session_id)
-    .order("created_at", { ascending: true });
+    .order("timestamp", { ascending: true });
+    console.log("getMessagesBySessionId", { data, error });
   if (error) throw error;
 
   return data;

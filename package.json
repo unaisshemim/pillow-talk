@@ -10,9 +10,13 @@
     "dev": "ts-node-dev src/main.ts"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.55",
+    "@langchain/langgraph": "^0.2.72",
+    "@langchain/openai": "^0.5.10",
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.5.0",
     "express": "^4.17.1",
+    "langchain": "^0.3.25",
     "openai": "^4.98.0"
   },
   "devDependencies": {

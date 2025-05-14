@@ -3,6 +3,6 @@ export interface Lobby {
   creator_id: string;
   partner_id: string | null;
   status: string;
-  created_at: string;
+  timestamp: string;
 }
 

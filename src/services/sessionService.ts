@@ -8,7 +8,7 @@ export async function createSessionInDb(session: {
 }) {
   const { data, error } = await supabase
     .from("sessions")
-    .insert([{ ...session, created_at: new Date().toISOString() }])
+    .insert([{ ...session, timestamp: new Date().toISOString() }])
     .select();
   console.log("createSessionInDb", { data, error });
   if (error) throw error;
@@ -42,7 +42,7 @@ export async function getSessionsByUserId(user_id: string) {
     .from("sessions")
     .select("*")
     .eq("user_id", user_id)
-    .order("created_at", { ascending: false });
+    .order("timestamp", { ascending: false });
     console.log("getSessionsByUserId", { data, error });
   if (error) throw error;
   return data;
@@ -69,7 +69,7 @@ export async function getSessionsByLobbyId(lobby_id: string) {
     .from("sessions")
     .select("*")
     .eq("lobby_id", lobby_id)
-    .order("created_at", { ascending: false });
+    .order("timestamp", { ascending: false });
   console.log("getSessionsByLobbyId", { data, error });
   if (error) throw error;
   return data;
