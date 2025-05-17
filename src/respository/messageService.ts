@@ -1,7 +1,5 @@
 import { supabase } from "../config/supabaseClient";
 
-
-
 export async function saveMessageToDb(message: {
   session_id: string;
   user_id: string;

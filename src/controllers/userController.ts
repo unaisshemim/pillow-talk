@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/supabaseClient";
 
-
 export async function signUpUser(req: Request, res: Response) {
   const { email, password } = req.body;
   if (!email || !password) {

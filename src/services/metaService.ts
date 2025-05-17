@@ -4,36 +4,72 @@ import { SystemMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { convertToEmbedding, model } from "../config/llmService";
-import { pinecone } from "../config/pineconeClient";
+// import { pinecone } from "../config/pineconeClient";
 dotenv.config();
 
 const lightmetaPrompt = ChatPromptTemplate.fromMessages([
   new SystemMessage(
-    `Extract the following lightweight metadata from the user's message:
-    - topics: a short array of 1-3 key topics (single words or short phrases)
-    - tone: a single word describing the emotional tone (e.g. anxious, happy, sad, hopeful, angry, etc)
-    - key_sentence: the most important sentence from the text
-    Respond ONLY as a valid JSON object with keys: topics, tone, key_sentence.`
+    `You are a JSON metadata extractor. Given a single user message:
+- Extract 1–3 key topics (as lowercase single words or short phrases)
+- Identify the emotional tone (e.g., "anxious", "angry", "hopeful", "neutral")
+- Pick the most important sentence in the message
+
+Respond ONLY as strict JSON. Do NOT include markdown, \`json\`, or code blocks. Just return:
+{
+  "topics": ["..."],
+  "tone": "...",
+  "key_sentence": "..."
+}
+
+If you're unsure, do your best — never leave fields empty.
+`
   ),
   ["human", "{text}"],
 ]);
+const metadataStore: any[] = [];
 
-export async function extractLightWeightMetadata({
-  text,
-}: {
-  text: string;
-}): Promise<{ topics: string[]; tone: string; key_sentence: string }> {
+export async function extractLightWeightMetadata(
+  text: string
+): Promise<Array<{ topics: string[]; tone: string; key_sentence: string }>> {
   const chain = RunnableSequence.from([lightmetaPrompt, model]);
   const response = await chain.invoke({ text });
+
   // Try to parse the response as JSON
   try {
-    if (typeof response.content === "string") {
-      return JSON.parse(response.content);
-    } else if (Array.isArray(response.content)) {
+    let raw = response.content;
+
+    // Normalize: remove ```json or ``` wrappers
+    if (typeof raw === "string") {
+      raw = raw
+        .replace(/^```json/, "")
+        .replace(/^```/, "")
+        .replace(/```$/, "")
+        .trim();
+      const parsed = JSON.parse(raw);
+      metadataStore.push(parsed);
+      console.log("hellow");
+
+      console.log("metadataStore", metadataStore);
+
+      return parsed;
+    }
+
+    if (Array.isArray(response.content)) {
       const joined = response.content
         .map((part: any) => (typeof part === "string" ? part : part.text || ""))
-        .join(" ");
-      return JSON.parse(joined);
+        .join(" ")
+        .replace(/^```json/, "")
+        .replace(/^```/, "")
+        .replace(/```$/, "")
+        .trim();
+
+      const parsed = JSON.parse(joined);
+      metadataStore.push(parsed);
+      console.log("hellow");
+
+      console.log("metadataStore", metadataStore);
+
+      return parsed;
     }
   } catch (e) {
     console.error(
@@ -73,27 +109,26 @@ export async function convertMetaDataToEmbeddingInput(meta: {
 // Save an embedding to the DB (assumes you have an embeddings table)
 // Save an embedding to Pinecone (vector DB)
 
-
-export async function saveEmbeddingToDb({
-  session_id,
-  embedding,
-  meta,
-}: {
-  session_id: string;
-  embedding: number[];
-  meta: any;
-}) {
-  // Index name should match your Pinecone setup
-  const index = pinecone.index(process.env.PINECONE_INDEX!);
-  await index.upsert([
-    {
-      id: session_id,
-      values: embedding,
-      metadata: meta,
-    },
-  ]);
-  return { success: true };
-}
+// export async function saveEmbeddingToDb({
+//   session_id,
+//   embedding,
+//   meta,
+// }: {
+//   session_id: string;
+//   embedding: number[];
+//   meta: any;
+// }) {
+//   // Index name should match your Pinecone setup
+//   const index = pinecone.index(process.env.PINECONE_INDEX!);
+//   await index.upsert([
+//     {
+//       id: session_id,
+//       values: embedding,
+//       metadata: meta,
+//     },
+//   ]);
+//   return { success: true };
+// }
 
 // Prompt and function to generate a final summary of 300 words
 const finalSummaryPrompt = ChatPromptTemplate.fromMessages([

@@ -1,7 +1,6 @@
 import { supabase } from "../config/supabaseClient";
 import { SessionRole } from "../enums/sessionRole";
 
-
 export async function createSessionInDb(session: {
   lobby_id: string;
   user_id: string;

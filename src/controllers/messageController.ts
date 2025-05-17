@@ -5,7 +5,7 @@ import {
 } from "../respository/messageService";
 import { getAIReply } from "../services/chatAiService";
 import { Message } from "../types/message";
-
+import { extractLightWeightMetadata } from "../services/metaService";
 
 // POST /api/message
 export const postMessage = async (req: Request, res: Response) => {
@@ -33,11 +33,18 @@ export const postMessage = async (req: Request, res: Response) => {
       role: "agent",
       content: assistantReply,
     });
+
     const { id, content: agentContent, role, timestamp } = agentMessage;
 
     res.status(201).json({ id, agentContent, role, timestamp });
 
-
+    void (async () => {
+      const lightweightMetadata = await extractLightWeightMetadata(
+        content,
+        
+      );
+      console.log("lightweightMetadata", lightweightMetadata);
+    })();
   } catch (error) {
     res.status(500).json({ error: "Failed to process message" });
   }
