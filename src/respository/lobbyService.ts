@@ -1,4 +1,5 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "../config/supabaseClient";
+
 
 export async function createLobbyInDb(creator_id: string) {
   const { data: existingLobby, error: findError } = await supabase

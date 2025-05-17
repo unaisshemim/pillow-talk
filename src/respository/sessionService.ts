@@ -1,5 +1,6 @@
+import { supabase } from "../config/supabaseClient";
 import { SessionRole } from "../enums/sessionRole";
-import { supabase } from "./supabaseClient";
+
 
 export async function createSessionInDb(session: {
   lobby_id: string;
@@ -43,7 +44,7 @@ export async function getSessionsByUserId(user_id: string) {
     .select("*")
     .eq("user_id", user_id)
     .order("timestamp", { ascending: false });
-    console.log("getSessionsByUserId", { data, error });
+  console.log("getSessionsByUserId", { data, error });
   if (error) throw error;
   return data;
 }

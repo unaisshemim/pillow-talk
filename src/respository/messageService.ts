@@ -1,4 +1,6 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "../config/supabaseClient";
+
+
 
 export async function saveMessageToDb(message: {
   session_id: string;
@@ -21,7 +23,7 @@ export async function getMessagesBySessionId(session_id: string) {
     .select("*")
     .eq("session_id", session_id)
     .order("timestamp", { ascending: true });
-    console.log("getMessagesBySessionId", { data, error });
+  console.log("getMessagesBySessionId", { data, error });
   if (error) throw error;
 
   return data;

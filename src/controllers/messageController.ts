@@ -2,19 +2,21 @@ import { Request, Response } from "express";
 import {
   saveMessageToDb,
   getMessagesBySessionId,
-} from "../services/messageService";
-import { getAIReply } from "../services/aiService";
+} from "../respository/messageService";
+import { getAIReply } from "../services/chatAiService";
 import { Message } from "../types/message";
+
 
 // POST /api/message
 export const postMessage = async (req: Request, res: Response) => {
   try {
     const { session_id, user_id, content } = req.body;
+    console.log("postMessage", { session_id, user_id, content });
     if (!session_id || !user_id || !content) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     // Save user message
-    const userMessage = await saveMessageToDb({
+    await saveMessageToDb({
       session_id,
       user_id,
       role: "user",
@@ -34,6 +36,8 @@ export const postMessage = async (req: Request, res: Response) => {
     const { id, content: agentContent, role, timestamp } = agentMessage;
 
     res.status(201).json({ id, agentContent, role, timestamp });
+
+
   } catch (error) {
     res.status(500).json({ error: "Failed to process message" });
   }

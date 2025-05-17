@@ -6,10 +6,10 @@ import {
   getSessionById,
   deleteSessionById,
   getSessionsByLobbyId,
-} from "../services/sessionService";
+} from "../respository/sessionService";
 import { SessionRole } from "../enums/sessionRole";
 import { Lobby } from "../types/lobby";
-import { getLobbyByUserId } from "../services/lobbyService";
+import { getLobbyByUserId } from "../respository/lobbyService";
 
 // POST /session/start
 export const startSession = async (req: Request, res: Response) => {
@@ -93,7 +93,6 @@ export const deleteSession = async (req: Request, res: Response) => {
 // GET /sessions (by lobby_id)
 export const getLobbySessions = async (req: Request, res: Response) => {
   try {
-
     const { lobby_id } = req.params;
     if (!lobby_id || typeof lobby_id !== "string") {
       return res.status(400).json({ error: "Missing or invalid lobby_id" });
