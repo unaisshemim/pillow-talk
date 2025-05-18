@@ -6,10 +6,10 @@ import {
   getSessionById,
   deleteSessionById,
   getSessionsByLobbyId,
-} from "../respository/sessionService";
+} from "../respository/sessionRepository";
 import { SessionRole } from "../enums/sessionRole";
 import { Lobby } from "../types/lobby";
-import { getLobbyByUserId } from "../respository/lobbyService";
+import { getLobbyByUserId } from "../respository/lobbyRepository";
 
 // POST /session/start
 export const startSession = async (req: Request, res: Response) => {

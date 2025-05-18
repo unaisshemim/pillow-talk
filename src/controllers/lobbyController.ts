@@ -3,7 +3,7 @@ import {
   createLobbyInDb,
   joinLobbyInDb,
   getLobbyByUserId,
-} from "../respository/lobbyService";
+} from "../respository/lobbyRepository";
 import { Lobby } from "../types/lobby";
 
 // POST /api/lobby/create

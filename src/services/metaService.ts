@@ -4,6 +4,8 @@ import { SystemMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { convertToEmbedding, model } from "../config/llmService";
+import { Metadata } from "../types/lightweightMetadata";
+import { cleanJsonResponse } from "../helpers/cleanJson";
 // import { pinecone } from "../config/pineconeClient";
 dotenv.config();
 
@@ -26,61 +28,42 @@ If you're unsure, do your best — never leave fields empty.
   ),
   ["human", "{text}"],
 ]);
-const metadataStore: any[] = [];
 
 export async function extractLightWeightMetadata(
   text: string
-): Promise<Array<{ topics: string[]; tone: string; key_sentence: string }>> {
+): Promise<Metadata> {
   const chain = RunnableSequence.from([lightmetaPrompt, model]);
   const response = await chain.invoke({ text });
+  let rawContent = response.content;
 
-  // Try to parse the response as JSON
   try {
-    let raw = response.content;
-
-    // Normalize: remove ```json or ``` wrappers
-    if (typeof raw === "string") {
-      raw = raw
-        .replace(/^```json/, "")
-        .replace(/^```/, "")
-        .replace(/```$/, "")
-        .trim();
-      const parsed = JSON.parse(raw);
-      metadataStore.push(parsed);
-      console.log("hellow");
-
-      console.log("metadataStore", metadataStore);
+    // If string, clean and parse
+    if (typeof rawContent === "string") {
+      const cleaned = cleanJsonResponse(rawContent);
+      const parsed: Metadata = JSON.parse(cleaned);
 
       return parsed;
     }
 
-    if (Array.isArray(response.content)) {
-      const joined = response.content
-        .map((part: any) => (typeof part === "string" ? part : part.text || ""))
-        .join(" ")
-        .replace(/^```json/, "")
-        .replace(/^```/, "")
-        .replace(/```$/, "")
-        .trim();
-
-      const parsed = JSON.parse(joined);
-      metadataStore.push(parsed);
-      console.log("hellow");
-
-      console.log("metadataStore", metadataStore);
+    // If it's array of parts (LLM streaming case), join and parse
+    if (Array.isArray(rawContent)) {
+      const joined = rawContent
+        .map((part: any) =>
+          typeof part === "string" ? part : part?.text || ""
+        )
+        .join(" ");
+      const cleaned = cleanJsonResponse(joined);
+      const parsed: Metadata = JSON.parse(cleaned);
 
       return parsed;
     }
+
+    throw new Error("Unexpected response content format");
   } catch (e) {
-    console.error(
-      "Failed to parse meta extraction response:",
-      response.content
-    );
+    console.error("❌ Failed to parse meta extraction response:", rawContent);
     throw new Error("Meta extraction failed");
   }
-  throw new Error("Meta extraction failed");
 }
-
 // Merge an array of lightweight metadata objects into a single summary string
 export async function mergeLightWeightMetadataToFullSummary(
   metas: Array<{ topics: string[]; tone: string; key_sentence: string }>
@@ -146,6 +129,33 @@ export async function generateFinalSummary({
   meta: string;
 }): Promise<string> {
   const chain = RunnableSequence.from([finalSummaryPrompt, model]);
+  const response = await chain.invoke({ fulltext, meta });
+  if (typeof response.content === "string") {
+    return response.content;
+  } else if (Array.isArray(response.content)) {
+    return response.content
+      .map((part: any) => (typeof part === "string" ? part : part.text || ""))
+      .join(" ");
+  }
+  return "";
+}
+
+// Prompt and function to generate a chunk summary (short, focused, for every 10 messages)
+const chunkSummaryPrompt = ChatPromptTemplate.fromMessages([
+  new SystemMessage(
+    `You are a relationship AI coach. Given the following 10 chat messages and their extracted metadata, write a concise (3-5 sentence) summary that captures the main topics, emotional tones, and any key moments or shifts. Be neutral and factual. Respond ONLY with the summary text.`
+  ),
+  ["human", "{fulltext}\n\nMetadata: {meta}"],
+]);
+
+export async function generateChunkSummary({
+  fulltext,
+  meta,
+}: {
+  fulltext: string;
+  meta: string;
+}): Promise<string> {
+  const chain = RunnableSequence.from([chunkSummaryPrompt, model]);
   const response = await chain.invoke({ fulltext, meta });
   if (typeof response.content === "string") {
     return response.content;

@@ -1,11 +1,8 @@
-import { supabase } from "../config/supabaseClient";
 
-export async function saveMessageToDb(message: {
-  session_id: string;
-  user_id: string;
-  role: "user" | "agent";
-  content: string;
-}) {
+import { supabase } from "../config/supabaseClient";
+import { MessageRequest } from "../types/message";
+
+export async function saveMessageToDb(message: MessageRequest) {
   const { data, error } = await supabase
     .from("messages")
     .insert([message])

@@ -1,6 +1,6 @@
 import { Lobby } from "../types/lobby";
 import { SessionRole } from "../enums/sessionRole";
-import { getLobbyByUserId } from "../respository/lobbyService";
+import { getLobbyByUserId } from "../respository/lobbyRepository";
 
 export async function findRole(
   user_id: string
