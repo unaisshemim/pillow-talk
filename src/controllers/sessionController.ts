@@ -6,10 +6,20 @@ import {
   getSessionById,
   deleteSessionById,
   getSessionsByLobbyId,
+  getSessionIdByUserId,
 } from "../respository/sessionRepository";
 import { SessionRole } from "../enums/sessionRole";
 import { Lobby } from "../types/lobby";
 import { getLobbyByUserId } from "../respository/lobbyRepository";
+import {
+  getChunksBySessionId,
+  markChunksAsSummarized,
+} from "../respository/chunkSummaryRepository";
+import { mergeSummaryText } from "../helpers/mergeSummary";
+import { ChunkSummaryWithId } from "../types/chunkSummary";
+import { generateFinalSummary } from "../services/metaService";
+import { convertToEmbedding } from "../config/llmService";
+import { upsertFinalSummaryToPineCone } from "../respository/pineconeRepository";
 
 // POST /session/start
 export const startSession = async (req: Request, res: Response) => {
@@ -37,20 +47,71 @@ export const startSession = async (req: Request, res: Response) => {
   }
 };
 
-// PATCH /session/:id/complete
+type finalSummary = {
+  report: string;
+  metadata: {
+    topics: string[];
+    tone: string;
+    key_sentence: string;
+  };
+  advice: string;
+};
+
+// put /session/:userId/complete
 export const completeSession = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing session ID" });
+    }
 
-    const { summary, tone, topics, embedding_id } = req.body;
-    const session = await completeSessionInDb(id, {
-      summary,
-      tone,
-      topics,
-      embedding_id,
+    const sessionId = await getSessionIdByUserId(userId);
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID not found for user" });
+    }
+    res.status(200).json("session completed successfully");
+    //extract all summary from chunks data on the session
+
+    const chunks: Array<ChunkSummaryWithId> = await getChunksBySessionId(
+      sessionId
+    );
+    const chunkIds: string[] = chunks.map((chunk) => chunk.id);
+
+    //merge all summaries into one
+
+    const mergedSummary: string = mergeSummaryText(chunks);
+    //generate summary detailed report from those with gpt and extract metadata
+    const finalSummary: finalSummary = await generateFinalSummary(
+      mergedSummary
+    );
+
+    //embed the summary
+    const embedding = await convertToEmbedding(mergedSummary);
+    console.log("bomb1");
+    const storePinconeEmbedding: string = await upsertFinalSummaryToPineCone({
+      sessionId: sessionId,
+      userId: userId,
+      summary: mergedSummary,
+      embedding,
+      tone: finalSummary.metadata.tone,
+      topics: finalSummary.metadata.topics,
     });
-    res.status(200).json(session);
+
+    console.log("Final summary stored in Pinecone:", storePinconeEmbedding);
+
+    // store all pinecone embedding ids in the session recor
+
+    const session = await completeSessionInDb(sessionId, {
+      summary: mergedSummary,
+      metadata: finalSummary.metadata,
+      advice: finalSummary.advice,
+      report: finalSummary.report,
+      embedding_id: storePinconeEmbedding,
+    });
+    await markChunksAsSummarized(chunkIds);
   } catch (error) {
+    console.error("Error completing session:", error);
     res.status(500).json({ error: "Failed to complete session" });
   }
 };

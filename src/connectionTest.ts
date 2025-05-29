@@ -1,5 +1,5 @@
+import { pinecone } from "./config/pineconeClient";
 import { supabase } from "./config/supabaseClient";
-
 
 // Test Supabase connection
 export async function testSupabaseConnection() {
@@ -8,14 +8,25 @@ export async function testSupabaseConnection() {
     if (error) {
       console.error("Supabase connection failed:", error.message);
     } else {
-      console.log("Supabase is connected!");
+      console.log("✅ Supabase is connected!");
     }
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
 }
 
+// Test Pinecone connection
+
+export async function testPineconeConnection() {
+  try {
+    const indexes = await pinecone.listIndexes();
+    console.log("✅ Pinecone is connected! Indexes:");
+  } catch (err) {
+    console.error("❌ Pinecone connection error:", err);
+  }
+}
+
 // Test Localhost (Express) connection
 export function testLocalhostConnection(port: number) {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`✅ Server is running on http://localhost:${port}`);
 }

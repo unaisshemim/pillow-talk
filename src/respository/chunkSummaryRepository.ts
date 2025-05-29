@@ -15,8 +15,10 @@ export async function getChunksBySessionId(sessionId: string) {
     .from("chunk_summaries")
     .select("*")
     .eq("session_id", sessionId)
+    .eq("is_summarized", false)
     .order("chunk_index", { ascending: true });
   if (error) throw error;
+
   return data;
 }
 
@@ -38,6 +40,18 @@ export async function deleteChunksForSession(sessionId: string) {
     .from("chunk_summaries")
     .delete()
     .eq("session_id", sessionId);
+  if (error) throw error;
+  return data;
+}
+export async function markChunksAsSummarized(chunkIds: string[]) {
+  if (chunkIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("chunk_summaries")
+    .update({ is_summarized: true })
+    .in("id", chunkIds)
+    .select();
+
   if (error) throw error;
   return data;
 }

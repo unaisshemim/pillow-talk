@@ -7,6 +7,7 @@ import sessionRoutes from "./routes/sessionRoutes";
 import {
   testSupabaseConnection,
   testLocalhostConnection,
+  testPineconeConnection,
 } from "./connectionTest";
 
 const app = express();
@@ -19,11 +20,9 @@ app.use("/api/lobby", lobbyRoutes);
 app.use("/api/message", messageRoutes); //add message here and remove from routes
 app.use("/api/session", sessionRoutes); //add session here and remove from routes
 
-app.get("/", (req, res) => {
-  res.send("Hello, Worlds!");
-});
 
 void testSupabaseConnection();
+void testPineconeConnection();
 
 app.listen(PORT, () => {
   testLocalhostConnection(Number(PORT));

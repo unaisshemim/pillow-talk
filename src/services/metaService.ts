@@ -6,6 +6,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { convertToEmbedding, model } from "../config/llmService";
 import { Metadata } from "../types/lightweightMetadata";
 import { cleanJsonResponse } from "../helpers/cleanJson";
+import { Meta } from "@langchain/langgraph/dist/graph/zod/state";
 // import { pinecone } from "../config/pineconeClient";
 dotenv.config();
 
@@ -65,16 +66,24 @@ export async function extractLightWeightMetadata(
   }
 }
 // Merge an array of lightweight metadata objects into a single summary string
+
+//plan to move this to a separate file
 export async function mergeLightWeightMetadataToFullSummary(
-  metas: Array<{ topics: string[]; tone: string; key_sentence: string }>
-): Promise<string> {
-  // Simple merge: join topics, tones, and key sentences
+  metas: Array<Metadata>
+): Promise<Metadata> {
+  // Maintain original order (first to last)
   const allTopics = Array.from(new Set(metas.flatMap((meta) => meta.topics)));
   const allTones = Array.from(new Set(metas.map((meta) => meta.tone)));
-  const keySentences = metas.map((meta) => meta.key_sentence).filter(Boolean);
-  return `Topics: ${allTopics.join(", ")}. Tones: ${allTones.join(
-    ", "
-  )}. Key sentences: ${keySentences.join(" ")}`;
+  const keySentences = metas
+    .map((meta) => meta.key_sentence)
+    .filter(Boolean)
+    .reverse(); // Reverse again since Supabase returns latest first
+
+  return {
+    topics: allTopics,
+    tone: allTones.join(", "),
+    key_sentence: keySentences.join(","),
+  };
 }
 
 // Convert metadata to an embedding using aiService
@@ -92,52 +101,62 @@ export async function convertMetaDataToEmbeddingInput(meta: {
 // Save an embedding to the DB (assumes you have an embeddings table)
 // Save an embedding to Pinecone (vector DB)
 
-// export async function saveEmbeddingToDb({
-//   session_id,
-//   embedding,
-//   meta,
-// }: {
-//   session_id: string;
-//   embedding: number[];
-//   meta: any;
-// }) {
-//   // Index name should match your Pinecone setup
-//   const index = pinecone.index(process.env.PINECONE_INDEX!);
-//   await index.upsert([
-//     {
-//       id: session_id,
-//       values: embedding,
-//       metadata: meta,
-//     },
-//   ]);
-//   return { success: true };
-// }
 
 // Prompt and function to generate a final summary of 300 words
 const finalSummaryPrompt = ChatPromptTemplate.fromMessages([
   new SystemMessage(
-    `You are a relationship AI coach. Given the following chat and metadata, write a clear, emotionally intelligent, and actionable summary for the user(s) in 300 words or less. Focus on the main issues, emotional tones, and key moments. End with a positive, growth-oriented suggestion. Respond ONLY with the summary text.`
+    `You are a relationship AI coach. Given the following chat and metadata, return a JSON object with:
+
+1. "report" (string): A clear, emotionally intelligent summary of the overall conversation in under 300 words.
+2. "metadata" (object):
+   - "topics" (string[]): Key recurring discussion themes (e.g., "trust", "household chores", "emotional distance").
+   - "tone" (string): Overall emotional tone (e.g., "tense", "hopeful", "detached").
+   - "key_sentence" (string): The most emotionally revealing or pivotal sentence spoken.
+3. "advice" (string): A constructive, growth-oriented suggestion for moving forward.
+
+### Respond ONLY in valid JSON. Ensure no string is cut off mid-sentence. Wrap up "advice" clearly. Do not use triple backticks.
+Limit your total output to ~800 tokens max.
+.`
   ),
-  ["human", "{fulltext}\n\nMetadata: {meta}"],
+  ["human", "{summary}\n"],
 ]);
 
-export async function generateFinalSummary({
-  fulltext,
-  meta,
-}: {
-  fulltext: string;
-  meta: string;
-}): Promise<string> {
-  const chain = RunnableSequence.from([finalSummaryPrompt, model]);
-  const response = await chain.invoke({ fulltext, meta });
-  if (typeof response.content === "string") {
-    return response.content;
-  } else if (Array.isArray(response.content)) {
-    return response.content
-      .map((part: any) => (typeof part === "string" ? part : part.text || ""))
-      .join(" ");
+export interface FinalSummary {
+  report: string;
+  metadata: Metadata;
+  advice: string;
+}
+
+export async function generateFinalSummary(
+  summary: string
+): Promise<FinalSummary> {
+  try {
+    const chain = RunnableSequence.from([finalSummaryPrompt, model]);
+    const response = await chain.invoke({ summary });
+
+    let text =
+      typeof response.content === "string"
+        ? response.content
+        : Array.isArray(response.content)
+        ? response.content
+            .map((part: any) =>
+              typeof part === "string" ? part : part.text || ""
+            )
+            .join(" ")
+        : "";
+
+    text = cleanJsonResponse(text);
+
+    try {
+      return JSON.parse(text) as FinalSummary;
+    } catch (err) {
+      console.error("❌ JSON parse failed. Raw output:", text);
+      throw err;
+    }
+  } catch (error) {
+    console.error("❌ Failed to generate final summary:", error);
+    throw new Error("Final summary generation failed");
   }
-  return "";
 }
 
 // Prompt and function to generate a chunk summary (short, focused, for every 10 messages)
@@ -148,13 +167,10 @@ const chunkSummaryPrompt = ChatPromptTemplate.fromMessages([
   ["human", "{fulltext}\n\nMetadata: {meta}"],
 ]);
 
-export async function generateChunkSummary({
-  fulltext,
-  meta,
-}: {
-  fulltext: string;
-  meta: string;
-}): Promise<string> {
+export async function generateChunkSummary(
+  fulltext: string,
+  meta: Metadata
+): Promise<string> {
   const chain = RunnableSequence.from([chunkSummaryPrompt, model]);
   const response = await chain.invoke({ fulltext, meta });
   if (typeof response.content === "string") {

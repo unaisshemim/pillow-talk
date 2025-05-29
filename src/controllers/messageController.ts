@@ -1,11 +1,18 @@
 import { Request, Response } from "express";
 import {
   saveMessageToDb,
-  getMessagesBySessionId,
+  getAllMessagesBySessionId,
+  getUnsummaryUserMessageCount,
+  getLastTenMessagesMetadataBySessionId,
+  markMessagesAsSummarized,
 } from "../respository/messageRepository";
 import { getAIReply } from "../services/chatAiService";
 import { MessageResponse, MessageRequest } from "../types/message";
-import { extractLightWeightMetadata } from "../services/metaService";
+import {
+  extractLightWeightMetadata,
+  generateChunkSummary,
+  mergeLightWeightMetadataToFullSummary,
+} from "../services/metaService";
 import {
   addChunkSummary,
   getLatestChunkIndex,
@@ -16,7 +23,6 @@ import { Metadata } from "../types/lightweightMetadata";
 export const postMessage = async (req: Request, res: Response) => {
   try {
     const { session_id, user_id, content } = req.body;
-    console.log("postMessage", { session_id, user_id, content });
     if (!session_id || !user_id || !content) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -33,72 +39,87 @@ export const postMessage = async (req: Request, res: Response) => {
       content: assistantReply,
     });
 
-    const { id, content: agentContent, role, timestamp } = agentMessage;
+    const { id, content: agentContent, role, created_at } = agentMessage;
 
-    res.status(201).json({ id, agentContent, role, timestamp });
+    res.status(201).json({ id, agentContent, role, created_at });
 
-    void (async () => {
-      // Metadata extraction
-      const lightweightMetadata: Metadata = await extractLightWeightMetadata(
-        content
-      );
-      // Save user message to database
-      await saveMessageToDb({
-        session_id,
-        user_id,
-        role: "user",
-        content,
-        metadata: lightweightMetadata,
-      });
-
-      // Get all messages for this session
-      const allMessages = await getMessagesBySessionId(session_id);
-      // Only consider messages with metadata (i.e., user messages)
-      const userMessagesWithMeta = allMessages.filter(
-        (msg: any) => msg.role === "user" && msg.metadata
-      );
-
-      // If we have a multiple of 10 user messages, generate a chunk summary
-      if (
-        userMessagesWithMeta.length > 0 &&
-        userMessagesWithMeta.length % 10 === 0
-      ) {
-        // Pull metadata from the last 10 messages
-        const last10Metas = userMessagesWithMeta
-          .slice(-10)
-          .map((msg: any) => msg.metadata);
-        // Import merge and summary functions
-        const { mergeLightWeightMetadataToFullSummary, generateChunkSummary } =
-          await import("../services/metaService");
-        // Merge metadata into a summary string
-        const mergedMeta = await mergeLightWeightMetadataToFullSummary(
-          last10Metas
+    (async () => {
+      try {
+        // Metadata extraction
+        const lightweightMetadata: Metadata = await extractLightWeightMetadata(
+          content
         );
-        // Optionally, concatenate the last 10 message contents for context
-        const last10Contents = userMessagesWithMeta
-          .slice(-10)
-          .map((msg: any) => msg.content)
-          .join("\n");
-        // Generate a GPT-based summary
-        const gptSummary = await generateChunkSummary({
-          fulltext: last10Contents,
-          meta: mergedMeta,
-        });
-        // Get the latest chunk index and increment for the new chunk
-        const latestChunkIndex = await getLatestChunkIndex(session_id);
-        const newChunkIndex =
-          (typeof latestChunkIndex === "number" ? latestChunkIndex : 0) + 1;
-        // Save chunk summary to database
-        const chunkSummary = await addChunkSummary({
+        console.log("Lightweight Metadata:", lightweightMetadata);
+
+        // Save user message to database
+        const userMessage: MessageResponse = await saveMessageToDb({
           session_id,
-          chunk_index: newChunkIndex,
-          metadata: {
-            topics: last10Metas.flatMap((m: any) => m.topics),
-            tone: last10Metas.map((m: any) => m.tone).join(", "),
-            key_sentence: gptSummary,
-          },
+          user_id,
+          role: "user",
+          content,
+          metadata: lightweightMetadata,
         });
-        console.log("chunkSummary (10 messages)", chunkSummary);
+
+        // const unsummeredMesssageCount = await getUnsummaryUserMessageCount(
+        //   session_id
+        // );
+        console.log(userMessage.message_index)
+
+        if (
+          userMessage.message_index != null &&
+          userMessage.message_index % 10 === 0
+        ) {
+          const rawMessages = await getLastTenMessagesMetadataBySessionId(
+            session_id,
+            10
+          );
+
+          const lastTenMessages: Array<Metadata> = rawMessages.map(
+            (msg) => msg.metadata
+          );
+          const messageIds = rawMessages.map((msg) => msg.id);
+
+          const start_message_id = rawMessages[rawMessages.length - 1]?.id;
+          const end_message_id = rawMessages[0]?.id;
+          console.log("Last 10 messages:", lastTenMessages);
+
+          // Keep full messages to track start/end IDs
+
+          const mergedata: Metadata =
+            await mergeLightWeightMetadataToFullSummary(lastTenMessages);
+
+          //here chunk summary function will b called
+          console.log("Merged Metadata:", mergedata);
+
+          // //generate chunk summary
+          const chunkSummary = await getLatestChunkIndex(session_id);
+          const chunkIndex =
+            typeof chunkSummary === "number" ? chunkSummary : 0;
+          const newChunkIndex = chunkIndex + 1;
+          console.log("New Chunk Index:", newChunkIndex);
+
+          //summary text
+          const generatedChunkSummary = await generateChunkSummary(
+            mergedata.key_sentence,
+            mergedata
+          );
+
+        
+          const chunkLightWeightMetadata: Metadata =
+            await extractLightWeightMetadata(generatedChunkSummary);
+
+          const saveChunkSummary = await addChunkSummary({
+            session_id,
+            chunk_index: newChunkIndex,
+            metadata: chunkLightWeightMetadata,
+            start_message_id: userMessage.id,
+            end_message_id: userMessage.id,
+            summary_text: generatedChunkSummary,
+          });
+          await markMessagesAsSummarized(messageIds);
+        }
+      } catch (err) {
+        console.error("[postMessage background async]", err);
       }
     })();
   } catch (error) {
@@ -113,7 +134,7 @@ export const getMessages = async (req: Request, res: Response) => {
     if (!session_id) {
       return res.status(400).json({ error: "Missing session_id" });
     }
-    const messages = await getMessagesBySessionId(session_id);
+    const messages = await getAllMessagesBySessionId(session_id);
     res.status(200).json(messages);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch messages" });

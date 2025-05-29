@@ -13,8 +13,8 @@ const router = express.Router();
 // POST /session/start
 router.post("/start", startSession);
 
-// PATCH /session/:id/complete
-router.patch("/:id/complete", completeSession);
+// Put /session/:id/complete
+router.put("/:userId/complete", completeSession);
 
 // GET /users/:user_id/sessions
 router.get("/users/:user_id", getUserSessions);

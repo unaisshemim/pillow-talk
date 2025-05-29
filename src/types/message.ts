@@ -6,6 +6,8 @@ export interface MessageRequest {
   role: "user" | "agent";
   content: string;
   metadata?: Metadata;
+  message_index?: number | null;
+  is_summarized?: boolean;
 }
 export interface MessageResponse {
   id: string;
@@ -13,6 +15,8 @@ export interface MessageResponse {
   user_id: string;
   role: "user" | "agent";
   content: string;
-  timestamp: string;
+  created_at: string;
   metadata?: Metadata;
+  message_index?: number | null;
+  is_summarized?: boolean;
 }

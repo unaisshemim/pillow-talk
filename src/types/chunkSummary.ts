@@ -4,6 +4,10 @@ export interface ChunkSummary {
   session_id: string;
   chunk_index: number;
   metadata: Metadata;
+  start_message_id: string;
+  end_message_id: string;
+  summary_text: String;
+  is_summarized?: boolean;
 }
 
 export interface ChunkSummaryWithId extends ChunkSummary {
@@ -11,5 +15,9 @@ export interface ChunkSummaryWithId extends ChunkSummary {
   session_id: string;
   chunk_index: number;
   metadata: Metadata;
-  timestamp: string;
+  created_at: string;
+  start_message_id: string;
+  end_message_id: string;
+  summary_text: String;
+  is_summarized?: boolean;
 }
