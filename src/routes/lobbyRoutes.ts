@@ -1,7 +1,7 @@
 import express from "express";
 import {
   createLobby,
-  joinLobby,
+  joinLobbyByCode,
   getLobbyByUser,
 } from "../controllers/lobbyController";
 
@@ -11,7 +11,7 @@ const router = express.Router();
 router.post("/create", createLobby);
 
 // POST /api/lobby/join
-router.post("/join", joinLobby);
+router.post("/join", joinLobbyByCode);
 
 // GET /api/lobby/user/:userId
 router.get("/user/:userId", getLobbyByUser);

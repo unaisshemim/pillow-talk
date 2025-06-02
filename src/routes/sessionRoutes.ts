@@ -10,11 +10,11 @@ import {
 
 const router = express.Router();
 
-// POST /session/start
+// POST /session/create
 router.post("/start", startSession);
 
 // Put /session/:id/complete
-router.put("/:userId/complete", completeSession);
+router.put("/:sessionId/complete", completeSession);
 
 // GET /users/:user_id/sessions
 router.get("/users/:user_id", getUserSessions);

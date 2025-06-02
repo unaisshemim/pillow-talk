@@ -4,7 +4,7 @@ import { supabase } from "./config/supabaseClient";
 // Test Supabase connection
 export async function testSupabaseConnection() {
   try {
-    const { error } = await supabase.from("users").select().limit(1);
+    const { error } = await supabase.from("profiles").select().limit(1);
     if (error) {
       console.error("Supabase connection failed:", error.message);
     } else {

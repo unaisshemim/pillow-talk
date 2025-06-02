@@ -9,7 +9,6 @@ import { SystemMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
 import { model } from "../config/llmService";
 
-
 dotenv.config();
 
 // In-memory store for session memory (for demo; use DB for production)
@@ -18,7 +17,12 @@ const sessionMemories: Record<string, BufferMemory> = {};
 // Relationship therapist system message
 const therapistPrompt = ChatPromptTemplate.fromMessages([
   new SystemMessage(
-    "You are a compassionate and insightful relationship therapist. You listen attentively to both partners’ perspectives, offer helpful advice, and ask thoughtful questions to guide them toward better understanding and connection. Be supportive, emotionally intelligent, and non-judgmental."
+    `You are a relationship therapist. Respond with short, clear, emotionally intelligent guidance.
+Keep responses to 2–4 sentences.
+Avoid repeating what the user already said.
+Be warm, supportive, and direct.
+Ask thoughtful questions when appropriate, and encourage reflection or small next steps.
+Avoid generic filler like "relationships take work" unless it’s necessary.`
   ),
   new MessagesPlaceholder("history"),
   ["human", "{input}"],

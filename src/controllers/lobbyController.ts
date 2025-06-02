@@ -1,38 +1,44 @@
 import { Request, Response } from "express";
 import {
   createLobbyInDb,
-  joinLobbyInDb,
+
   getLobbyByUserId,
+  joinLobbyByCodeInDb,
 } from "../respository/lobbyRepository";
 import { Lobby } from "../types/lobby";
 
 // POST /api/lobby/create
 export const createLobby = async (req: Request, res: Response) => {
   try {
-    const { creator_id } = req.body; // Assume user is authenticated and ID is provided
+    const { creator_id } = req.body;
 
     const lobby: Lobby = await createLobbyInDb(creator_id);
     console.log("Lobby created:", lobby);
 
-    res.status(201).json({ lobby_id: lobby.id });
+    res.status(201).json({ lobby_id: lobby.id, code: lobby.code });
   } catch (error) {
+    console.error("Create lobby error:", error);
     res.status(500).json({ error: "Failed to create lobby" });
   }
 };
 
 // POST /api/lobby/join
-export const joinLobby = async (req: Request, res: Response) => {
+export const joinLobbyByCode = async (req: Request, res: Response) => {
   try {
-    const { lobby_id, partner_id } = req.body; // Assume user is authenticated and ID is provided
-    const result = await joinLobbyInDb(lobby_id, partner_id);
+    const { code, partner_id } = req.body;
 
-    if (result) {
-      res.status(200).json({ message: "Joined lobby" });
-    } else {
-      res.status(400).json({ error: "Failed to join lobby" });
+    if (!code || !partner_id) {
+      return res.status(400).json({ error: "Missing code or partner_id" });
     }
-  } catch (error) {
-    res.status(500).json({ error: "Failed to join lobby" });
+
+    const lobby = await joinLobbyByCodeInDb(code, partner_id);
+    res.status(200).json({
+      message: "Successfully joined the lobby",
+      lobby_id: lobby.id,
+      connected_at: lobby.connected_at,
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to join lobby" });
   }
 };
 

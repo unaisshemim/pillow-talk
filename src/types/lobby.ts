@@ -4,4 +4,7 @@ export interface Lobby {
   partner_id: string | null;
   status: string;
   created_at: string;
+  code: string;
+  creator: { id: string; name: string } | null; // Changed to object type
+  partner: { id: string; name: string } | null; // Changed to object type
 }

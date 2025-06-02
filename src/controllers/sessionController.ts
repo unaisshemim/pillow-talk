@@ -7,6 +7,7 @@ import {
   deleteSessionById,
   getSessionsByLobbyId,
   getSessionIdByUserId,
+  getUserIdBySessionId,
 } from "../respository/sessionRepository";
 import { SessionRole } from "../enums/sessionRole";
 import { Lobby } from "../types/lobby";
@@ -57,62 +58,71 @@ type finalSummary = {
   advice: string;
 };
 
-// put /session/:userId/complete
+// put /session/:sessionId/complete
 export const completeSession = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
-    if (!userId) {
+    const { sessionId } = req.params;
+    if (!sessionId) {
       return res.status(400).json({ error: "Missing session ID" });
     }
 
-    const sessionId = await getSessionIdByUserId(userId);
-
-    if (!sessionId) {
-      return res.status(400).json({ error: "Session ID not found for user" });
+    const userId = await getUserIdBySessionId(sessionId);
+    if (!userId) {
+      return res.status(400).json({ error: "User ID not found for session" });
     }
-    res.status(200).json("session completed successfully");
-    //extract all summary from chunks data on the session
 
     const chunks: Array<ChunkSummaryWithId> = await getChunksBySessionId(
       sessionId
     );
     const chunkIds: string[] = chunks.map((chunk) => chunk.id);
+    const mergedSummary: string = mergeSummaryText(chunks).trim();
 
-    //merge all summaries into one
+    if (mergedSummary.length < 30) {
+      console.warn("Skipping embedding: merged summary too short.");
 
-    const mergedSummary: string = mergeSummaryText(chunks);
-    //generate summary detailed report from those with gpt and extract metadata
+      await completeSessionInDb(sessionId, {
+        summary: mergedSummary,
+        metadata: { topics: [], tone: "neutral", key_sentence: "" },
+        advice: "",
+        report: "",
+      });
+
+      await markChunksAsSummarized(chunkIds);
+
+      return res.status(200).json({
+        message: "Session too short — skipped embedding, marked complete.",
+      });
+    }
+
     const finalSummary: finalSummary = await generateFinalSummary(
       mergedSummary
     );
-
-    //embed the summary
     const embedding = await convertToEmbedding(mergedSummary);
-    console.log("bomb1");
     const storePinconeEmbedding: string = await upsertFinalSummaryToPineCone({
-      sessionId: sessionId,
-      userId: userId,
+      sessionId,
+      userId,
       summary: mergedSummary,
       embedding,
       tone: finalSummary.metadata.tone,
       topics: finalSummary.metadata.topics,
     });
 
-    console.log("Final summary stored in Pinecone:", storePinconeEmbedding);
-
-    // store all pinecone embedding ids in the session recor
-
-    const session = await completeSessionInDb(sessionId, {
+    await completeSessionInDb(sessionId, {
       summary: mergedSummary,
       metadata: finalSummary.metadata,
       advice: finalSummary.advice,
       report: finalSummary.report,
       embedding_id: storePinconeEmbedding,
     });
+
     await markChunksAsSummarized(chunkIds);
+
+    return res.status(200).json({ message: "Session completed and embedded." });
   } catch (error) {
     console.error("Error completing session:", error);
-    res.status(500).json({ error: "Failed to complete session" });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "Failed to complete session" });
+    }
   }
 };
 
