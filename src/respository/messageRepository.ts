@@ -37,8 +37,9 @@ export async function getAllMessagesBySessionId(session_id: string) {
     .from("messages")
     .select("*")
     .eq("session_id", session_id)
-    .order("create_at", { ascending: true });
+    .order("created_at", { ascending: true });
   if (error) throw error;
+
 
   return data;
 }

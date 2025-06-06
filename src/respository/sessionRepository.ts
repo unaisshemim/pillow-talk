@@ -7,6 +7,7 @@ export async function createSessionInDb(session: {
   lobby_id: string;
   user_id: string;
   role: SessionRole;
+  title:string;
 }) {
   const { data, error } = await supabase
     .from("sessions")
@@ -69,9 +70,21 @@ export async function getSessionById(id: string) {
 
 // ✅ Delete session by ID
 export async function deleteSessionById(id: string) {
-  const { error } = await supabase.from("sessions").delete().eq("id", id);
+  // Delete all messages associated with the session
+  const { error: messageError } = await supabase
+    .from("messages")
+    .delete()
+    .eq("session_id", id);
 
-  if (error) throw error;
+  if (messageError) throw messageError;
+
+  // Delete the session itself
+  const { error: sessionError } = await supabase
+    .from("sessions")
+    .delete()
+    .eq("id", id);
+
+  if (sessionError) throw sessionError;
   return { success: true };
 }
 

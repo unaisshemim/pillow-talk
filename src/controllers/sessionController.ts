@@ -6,7 +6,6 @@ import {
   getSessionById,
   deleteSessionById,
   getSessionsByLobbyId,
-  getSessionIdByUserId,
   getUserIdBySessionId,
 } from "../respository/sessionRepository";
 import { SessionRole } from "../enums/sessionRole";
@@ -25,7 +24,7 @@ import { upsertFinalSummaryToPineCone } from "../respository/pineconeRepository"
 // POST /session/start
 export const startSession = async (req: Request, res: Response) => {
   try {
-    const { user_id } = req.body;
+    const { user_id, title } = req.body;
     if (!user_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -41,7 +40,7 @@ export const startSession = async (req: Request, res: Response) => {
       role = SessionRole.PARTNER;
     }
 
-    const session = await createSessionInDb({ lobby_id, user_id, role });
+    const session = await createSessionInDb({ lobby_id, user_id, role, title });
     res.status(201).json(session);
   } catch (error) {
     res.status(500).json({ error: "Failed to create session" });
@@ -77,9 +76,8 @@ export const completeSession = async (req: Request, res: Response) => {
     const chunkIds: string[] = chunks.map((chunk) => chunk.id);
     const mergedSummary: string = mergeSummaryText(chunks).trim();
 
+    console.log("ending sessoisn");
     if (mergedSummary.length < 30) {
-      console.warn("Skipping embedding: merged summary too short.");
-
       await completeSessionInDb(sessionId, {
         summary: mergedSummary,
         metadata: { topics: [], tone: "neutral", key_sentence: "" },

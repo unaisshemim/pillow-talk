@@ -7,12 +7,15 @@ import {
 } from "@langchain/core/prompts";
 import { SystemMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
-import { model } from "../config/llmService";
+import { geminiModel, model } from "../config/llmService";
 
 dotenv.config();
 
 // In-memory store for session memory (for demo; use DB for production)
 const sessionMemories: Record<string, BufferMemory> = {};
+
+const useGemini = false;
+const llmModel = useGemini ? geminiModel : model;
 
 // Relationship therapist system message
 const therapistPrompt = ChatPromptTemplate.fromMessages([
@@ -42,7 +45,7 @@ export async function getAIReply(
     const memory = sessionMemories[session_id];
 
     // Use RunnableSequence instead of ConversationChain
-    const chain = RunnableSequence.from([therapistPrompt, model]);
+    const chain = RunnableSequence.from([therapistPrompt, llmModel]);
 
     // Get chat history from memory
     const chatHistory = await memory.loadMemoryVariables({});

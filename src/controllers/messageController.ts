@@ -49,7 +49,6 @@ export const postMessage = async (req: Request, res: Response) => {
         const lightweightMetadata: Metadata = await extractLightWeightMetadata(
           content
         );
-        console.log("Lightweight Metadata:", lightweightMetadata);
 
         // Save user message to database
         const userMessage: MessageResponse = await saveMessageToDb({
@@ -63,7 +62,6 @@ export const postMessage = async (req: Request, res: Response) => {
         // const unsummeredMesssageCount = await getUnsummaryUserMessageCount(
         //   session_id
         // );
-        console.log(userMessage.message_index)
 
         if (
           userMessage.message_index != null &&
@@ -81,7 +79,6 @@ export const postMessage = async (req: Request, res: Response) => {
 
           const start_message_id = rawMessages[rawMessages.length - 1]?.id;
           const end_message_id = rawMessages[0]?.id;
-          console.log("Last 10 messages:", lastTenMessages);
 
           // Keep full messages to track start/end IDs
 
@@ -89,14 +86,12 @@ export const postMessage = async (req: Request, res: Response) => {
             await mergeLightWeightMetadataToFullSummary(lastTenMessages);
 
           //here chunk summary function will b called
-          console.log("Merged Metadata:", mergedata);
 
           // //generate chunk summary
           const chunkSummary = await getLatestChunkIndex(session_id);
           const chunkIndex =
             typeof chunkSummary === "number" ? chunkSummary : 0;
           const newChunkIndex = chunkIndex + 1;
-          console.log("New Chunk Index:", newChunkIndex);
 
           //summary text
           const generatedChunkSummary = await generateChunkSummary(
@@ -137,6 +132,7 @@ export const getMessages = async (req: Request, res: Response) => {
     const messages = await getAllMessagesBySessionId(session_id);
     res.status(200).json(messages);
   } catch (error) {
+    console.error("Error fetching messages:", error);
     res.status(500).json({ error: "Failed to fetch messages" });
   }
 };
