@@ -101,7 +101,6 @@ export async function convertMetaDataToEmbeddingInput(meta: {
 // Save an embedding to the DB (assumes you have an embeddings table)
 // Save an embedding to Pinecone (vector DB)
 
-
 // Prompt and function to generate a final summary of 300 words
 const finalSummaryPrompt = ChatPromptTemplate.fromMessages([
   new SystemMessage(

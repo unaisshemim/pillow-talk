@@ -1,4 +1,3 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { BufferMemory } from "langchain/memory";
 import {

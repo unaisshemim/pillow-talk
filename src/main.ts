@@ -4,6 +4,7 @@ import userRoutes from "./routes/userRoutes";
 import lobbyRoutes from "./routes/lobbyRoutes";
 import messageRoutes from "./routes/messageRoutes";
 import sessionRoutes from "./routes/sessionRoutes";
+import refelectionRoutes from "./routes/refelectionRoutes";
 import {
   testSupabaseConnection,
   testLocalhostConnection,
@@ -17,9 +18,9 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/users", userRoutes);
 app.use("/api/lobby", lobbyRoutes);
-app.use("/api/message", messageRoutes); //add message here and remove from routes
-app.use("/api/session", sessionRoutes); //add session here and remove from routes
-
+app.use("/api/message", messageRoutes);
+app.use("/api/session", sessionRoutes);
+app.use("/api/reflection", refelectionRoutes);
 
 void testSupabaseConnection();
 void testPineconeConnection();
