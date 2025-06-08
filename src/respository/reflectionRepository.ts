@@ -50,18 +50,19 @@ export async function createNewSelfReflection({
     ])
     .select();
   if (error) throw error;
+  console.log(error);
   return data[0];
 }
-
 export async function saveReflection(
-  reflection: Reflection
+    reflection: Reflection
 ): Promise<Reflection> {
-  const { data, error } = await supabase
-    .from("reflections")
-    .insert([reflection])
-    .select();
-  if (error) throw error;
-  return data && data.length > 0 ? data[0] : reflection;
+    const { data, error } = await supabase
+        .from("reflections")
+        .update(reflection)
+        .eq("id", reflection.id)
+        .select();
+    if (error) throw error;
+    return data && data.length > 0 ? data[0] : reflection;
 }
 export async function getLastReflectionIndex(user_id: string): Promise<number> {
   const { data, error } = await supabase
@@ -73,4 +74,16 @@ export async function getLastReflectionIndex(user_id: string): Promise<number> {
     .maybeSingle();
   if (error) throw error;
   return data?.index ?? 0;
+}
+
+export async function getReflectionById(
+  reflection_id: string
+): Promise<Reflection | null> {
+  const { data, error } = await supabase
+    .from("reflections")
+    .select("*")
+    .eq("id", reflection_id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }

@@ -70,3 +70,52 @@ export async function generatePartnerPerspectiveReflectionQuestion(): Promise<st
         .trim()
     : "";
 }
+
+const sentimentPrompt = ChatPromptTemplate.fromMessages([
+  new SystemMessage(
+    `You are an emotional intelligence analyzer for relationship coaching. Analyze the following reflection deeply and respond in this exact flat JSON format (no nested "scores" object):
+
+{
+  "summary": "Brief emotional summary...",
+  "interpretation": "Deeper interpretation of emotional patterns...",
+  "confidence_score": 0.91,
+  "version": "v1",
+  "self_awareness": 0.85,
+  "emotional_expression": 0.76,
+  "attachment_secure": 0.6,
+  "attachment_anxious": 0.3,
+  "attachment_avoidant": 0.1,
+  "attachment_fearful": 0.2,
+  "communication_empathic": 0.9,
+  "communication_aggressive": 0.1,
+  "communication_passive": 0.2,
+  "conflict_avoidance": 0.2,
+  "conflict_confrontation": 0.4,
+  "conflict_compromise": 0.8,
+  "growth_mindset": 0.7,
+  "values_alignment": 0.65,
+  "past_patterns_toxic": 0.25,
+  "love_language_quality_time": 0.6,
+  "love_language_words": 0.8,
+  "love_language_touch": 0.7,
+  "love_language_gifts": 0.4,
+  "love_language_service": 0.5,
+  "relationship_expectations": 0.75
+}
+
+Ensure all score values are between 0 and 1 (float). Respond only with valid JSON.`
+  ),
+  ["human", "{answer}"],
+]);
+
+export async function analyzeSentiment(answer: string) {
+  const chain = RunnableSequence.from([sentimentPrompt, model]);
+  const result = await chain.invoke({ answer });
+
+  const content =
+    typeof result.content === "string"
+      ? result.content
+      : JSON.stringify(result.content);
+      
+  return JSON.parse(content);
+}
