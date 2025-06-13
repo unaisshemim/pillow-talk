@@ -1,13 +1,15 @@
 import { supabase } from "../config/supabaseClient";
 import { SessionRole } from "../enums/sessionRole";
 import { Metadata } from "../types/lightweightMetadata";
+import { SessionStatus } from "../enums/sessionRole";
 
 // ✅ Create a new session
 export async function createSessionInDb(session: {
   lobby_id: string;
   user_id: string;
   role: SessionRole;
-  title:string;
+  title: string;
+  parent_session_id?: string;
 }) {
   const { data, error } = await supabase
     .from("sessions")
@@ -15,6 +17,7 @@ export async function createSessionInDb(session: {
     .select();
 
   if (error) throw error;
+  console.log(error)
   return data?.[0] || null;
 }
 
@@ -33,7 +36,6 @@ export async function completeSessionInDb(
     .from("sessions")
     .update({
       ...update,
-      status: "completed",
       is_completed: true,
       ended_at: new Date().toISOString(),
     })
@@ -128,4 +130,41 @@ export async function getUserIdBySessionId(
 
   if (error) throw error;
   return data?.user_id || null;
+}
+export async function updateSessionRole(sessionId: string, role: SessionRole) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ role })
+    .eq("id", sessionId)
+    .select();
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function updateReportId(
+  reportId: string,
+  currentSessionId: string,
+  partnerSessionId: string
+) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ report_id: reportId })
+    .in("id", [currentSessionId, partnerSessionId]);
+
+  if (error) throw error;
+  console.log(error)
+  return data?.[0] || null;
+}
+
+export async function updateSessionStatus(
+  sessionId: string,
+  status: SessionStatus
+) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ status: status })
+    .eq("id", sessionId);
+  if (error) throw error;
+
+  return data?.[0] || null;
 }

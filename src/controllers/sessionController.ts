@@ -7,8 +7,10 @@ import {
   deleteSessionById,
   getSessionsByLobbyId,
   getUserIdBySessionId,
+  updateReportId,
+  updateSessionStatus,
 } from "../respository/sessionRepository";
-import { SessionRole } from "../enums/sessionRole";
+import { SessionRole, SessionStatus } from "../enums/sessionRole";
 import { Lobby } from "../types/lobby";
 import { getLobbyByUserId } from "../respository/lobbyRepository";
 import {
@@ -20,6 +22,8 @@ import { ChunkSummaryWithId } from "../types/chunkSummary";
 import { generateFinalSummary } from "../services/metaService";
 import { convertToEmbedding } from "../config/llmService";
 import { upsertFinalSummaryToPineCone } from "../respository/pineconeRepository";
+import { generateReport } from "../respository/reportRepository";
+import { getAllMessagesBySessionId } from "../respository/messageRepository";
 
 // POST /session/start
 export const startSession = async (req: Request, res: Response) => {
@@ -37,7 +41,7 @@ export const startSession = async (req: Request, res: Response) => {
       role = SessionRole.SOLO;
     } else {
       lobby_id = lobby.id;
-      role = SessionRole.PARTNER;
+      role = SessionRole.SOLO;
     }
 
     const session = await createSessionInDb({ lobby_id, user_id, role, title });
@@ -70,20 +74,40 @@ export const completeSession = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "User ID not found for session" });
     }
 
+    const session = await getSessionById(sessionId);
+
     const chunks: Array<ChunkSummaryWithId> = await getChunksBySessionId(
       sessionId
     );
     const chunkIds: string[] = chunks.map((chunk) => chunk.id);
     const mergedSummary: string = mergeSummaryText(chunks).trim();
+    console.log("merged summary: " + mergedSummary);
 
-    console.log("ending sessoisn");
     if (mergedSummary.length < 30) {
+      let summary = await getAllMessagesBySessionId(sessionId);
+      if (summary.length === 0) {
+        return res.status(400).json({
+          error: "Session has no messages to summarize",
+        });
+      }
+
+      const mergedUserContent = summary
+        .filter((msg) => msg.role === "user")
+        .map((msg) => msg.content)
+        .join(" ");
+
       await completeSessionInDb(sessionId, {
-        summary: mergedSummary,
+        summary: mergedUserContent,
         metadata: { topics: [], tone: "neutral", key_sentence: "" },
-        advice: "",
-        report: "",
       });
+
+      if (session.parent_session_id) {
+        await updateSessionStatus(
+          session.parent_session_id,
+          SessionStatus.COMPLETED
+        );
+        await updateSessionStatus(sessionId, SessionStatus.COMPLETED);
+      }
 
       await markChunksAsSummarized(chunkIds);
 
@@ -112,6 +136,14 @@ export const completeSession = async (req: Request, res: Response) => {
       report: finalSummary.report,
       embedding_id: storePinconeEmbedding,
     });
+    if (session.parent_session_id) {
+      console.log("hi");
+      await updateSessionStatus(
+        session.parent_session_id,
+        SessionStatus.COMPLETED
+      );
+      await updateSessionStatus(sessionId, SessionStatus.COMPLETED);
+    }
 
     await markChunksAsSummarized(chunkIds);
 
@@ -170,5 +202,104 @@ export const getLobbySessions = async (req: Request, res: Response) => {
     res.status(200).json(sessions);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch sessions" });
+  }
+};
+
+export const shareSessionToPartner = async (req: Request, res: Response) => {
+  try {
+    const { sessionId, user_id } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    let session = await getSessionById(sessionId);
+    let { lobby_id, partner_id } = await getLobbyByUserId(user_id);
+    let title = `Your partner reflected on "${session.title}"– want to share your side?`;
+    console.log("bomb1");
+    await updateSessionStatus(sessionId, SessionStatus.SHARED);
+
+    console.log("bomb2");
+
+    await createSessionInDb({
+      lobby_id,
+      user_id: partner_id,
+      role: SessionRole.PARTNER,
+      title,
+      parent_session_id: sessionId,
+    });
+
+    // Update the session to share with the partner
+
+    res
+      .status(200)
+      .json({ message: "Session shared with partner successfully" });
+  } catch (error) {
+    console.error("Error sharing session:", error);
+    res.status(500).json({ error: "Failed to share session" });
+  }
+};
+
+// POST /sessions/:id/generate-report
+
+export const generateSessionReport = async (req: Request, res: Response) => {
+  const { id: sessionId } = req.params;
+
+  try {
+    // Step 1: Validate session
+
+    const currentSession = await getSessionById(sessionId);
+    if (!currentSession) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    if (!currentSession.summary || !currentSession.is_completed) {
+      return res
+        .status(400)
+        .json({ error: "Session is incomplete or missing summary" });
+    }
+
+    // Step 2: Get partner session
+    const partnerSession = currentSession.parent_session_id
+      ? await getSessionById(currentSession.parent_session_id) // This is partner B
+      : await getSessionById(currentSession.id); // Fallback to current session if no parent
+
+    if (!partnerSession) {
+      return res.status(400).json({ error: "Partner session not found" });
+    }
+    if (!partnerSession.summary || !partnerSession.is_completed) {
+      return res
+        .status(400)
+        .json({ error: "Partner session is incomplete or missing summary" });
+    }
+
+    // Step 3: Prevent duplicate report generation
+    if (currentSession.report_id || partnerSession.report_id) {
+      return res
+        .status(400)
+        .json({ error: "Report already exists for one of the sessions" });
+    }
+
+    // Step 4: Generate report with GPT (stubbed)
+    const mergedSummary = `Merged summary of A and B`;
+    const tone = { a: "frustrated", b: "quiet" };
+    const topics = ["trust", "communication"];
+    const suggestions = ["Try a no-phone dinner", "Share 1 compliment daily"];
+
+    // Step 5: Store report using repository
+    const reportData = await generateReport({
+      merged_summary: mergedSummary,
+      tone,
+      topics,
+      suggestions: suggestions.join("; "),
+    });
+
+    const reportId = reportData.id;
+    console.log("Generated report ID:", );
+
+    // Step 6: Update both sessions with report_id
+    await updateReportId(reportId, currentSession.id, partnerSession.id);
+
+    // Step 7: Return success
+    return res.status(200).json({ success: true, report_id: reportId });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

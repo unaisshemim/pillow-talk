@@ -6,6 +6,8 @@ import {
   getSession,
   deleteSession,
   getLobbySessions,
+  shareSessionToPartner,
+  generateSessionReport,
 } from "../controllers/sessionController";
 
 const router = express.Router();
@@ -27,5 +29,11 @@ router.delete("/:id", deleteSession);
 
 // GET /sessions?lobby_id=
 router.get("/lobby/:lobby_id", getLobbySessions);
+
+//post /session/share-with-partner
+router.post("/share-to-partner", shareSessionToPartner);
+
+// POST /sessions/:id/generate-report
+router.post("/:id/generate-report", generateSessionReport);
 
 export default router;

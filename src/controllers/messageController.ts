@@ -77,8 +77,7 @@ export const postMessage = async (req: Request, res: Response) => {
           );
           const messageIds = rawMessages.map((msg) => msg.id);
 
-          const start_message_id = rawMessages[rawMessages.length - 1]?.id;
-          const end_message_id = rawMessages[0]?.id;
+    
 
           // Keep full messages to track start/end IDs
 
@@ -103,7 +102,7 @@ export const postMessage = async (req: Request, res: Response) => {
           const chunkLightWeightMetadata: Metadata =
             await extractLightWeightMetadata(generatedChunkSummary);
 
-          const saveChunkSummary = await addChunkSummary({
+            await addChunkSummary({
             session_id,
             chunk_index: newChunkIndex,
             metadata: chunkLightWeightMetadata,
