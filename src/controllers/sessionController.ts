@@ -22,8 +22,9 @@ import { ChunkSummaryWithId } from "../types/chunkSummary";
 import { generateFinalSummary } from "../services/metaService";
 import { convertToEmbedding } from "../config/llmService";
 import { upsertFinalSummaryToPineCone } from "../respository/pineconeRepository";
-import { generateReport } from "../respository/reportRepository";
+import { generateReport, getReportById } from "../respository/reportRepository";
 import { getAllMessagesBySessionId } from "../respository/messageRepository";
+import { generateSessionStoryReport } from "../services/sessionReportAiService";
 
 // POST /session/start
 export const startSession = async (req: Request, res: Response) => {
@@ -278,21 +279,42 @@ export const generateSessionReport = async (req: Request, res: Response) => {
     }
 
     // Step 4: Generate report with GPT (stubbed)
-    const mergedSummary = `Merged summary of A and B`;
-    const tone = { a: "frustrated", b: "quiet" };
-    const topics = ["trust", "communication"];
-    const suggestions = ["Try a no-phone dinner", "Share 1 compliment daily"];
+    const mergedSummary = `On their final evening of the session, John and Jane found themselves circling around familiar pain points — unspoken expectations, silent disappointments, and a growing emotional distance. John expressed frustration, feeling like his efforts to connect were often unnoticed. Jane, quiet and withdrawn, admitted to feeling overwhelmed by conflict and unsure how to respond without making things worse. 
 
-    // Step 5: Store report using repository
+Through the conversation, it became clear that both partners deeply cared for each other but were trapped in a loop where communication felt unsafe. By the end, they acknowledged their mutual desire to rebuild trust, agreeing that small, intentional actions could begin the healing.`;
+
+    const tone = {
+      a: "frustrated",
+      b: "quiet",
+    };
+
+    const topics = ["emotional safety", "communication", "expectations"];
+
+    const suggestions = [
+      "Start weekly check-in rituals",
+      "Use 'I feel' statements instead of blame",
+      "Limit phone use during quality time",
+      "Celebrate small relationship wins together",
+    ];
+
+    // const sessionsStory = await generateSessionStoryReport(
+    //   currentSession.summary,
+    //   partnerSession.summary
+    // );
+
+    // const { mergedSummary, tone, topics, suggestions } = sessionsStory;
+    // console.log("session story " + mergedSummary);
+
+    // // Step 5: Store report using repository
     const reportData = await generateReport({
       merged_summary: mergedSummary,
       tone,
       topics,
-      suggestions: suggestions.join("; "),
+      suggestions: suggestions.join(";"),
     });
 
     const reportId = reportData.id;
-    console.log("Generated report ID:", );
+    console.log("Generated report ID:");
 
     // Step 6: Update both sessions with report_id
     await updateReportId(reportId, currentSession.id, partnerSession.id);
@@ -301,5 +323,20 @@ export const generateSessionReport = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, report_id: reportId });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+//get get report by id
+export const getSessionReportById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const report = await getReportById(id);
+    if (!report) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+    res.status(200).json(report);
+  } catch (error) {
+    console.error("Error fetching report:", error);
+    res.status(500).json({ error: "Failed to fetch report" });
   }
 };

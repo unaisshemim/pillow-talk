@@ -8,7 +8,9 @@ import {
   getLobbySessions,
   shareSessionToPartner,
   generateSessionReport,
+  getSessionReportById,
 } from "../controllers/sessionController";
+
 
 const router = express.Router();
 
@@ -35,5 +37,8 @@ router.post("/share-to-partner", shareSessionToPartner);
 
 // POST /sessions/:id/generate-report
 router.post("/:id/generate-report", generateSessionReport);
+
+//get report 
+router.get("/report/:id", getSessionReportById);
 
 export default router;

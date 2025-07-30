@@ -77,8 +77,6 @@ export const postMessage = async (req: Request, res: Response) => {
           );
           const messageIds = rawMessages.map((msg) => msg.id);
 
-    
-
           // Keep full messages to track start/end IDs
 
           const mergedata: Metadata =
@@ -98,11 +96,10 @@ export const postMessage = async (req: Request, res: Response) => {
             mergedata
           );
 
-        
           const chunkLightWeightMetadata: Metadata =
             await extractLightWeightMetadata(generatedChunkSummary);
 
-            await addChunkSummary({
+          await addChunkSummary({
             session_id,
             chunk_index: newChunkIndex,
             metadata: chunkLightWeightMetadata,

@@ -1,7 +1,7 @@
 # <img src="https://www.pillow-talk.live/assets/logo-C1kgSa77.png" alt="Pillowtalk Logo" width="60" style="vertical-align:middle; margin-right:10px;"/> Pillow Talk – Relationship AI Coach
 
 ## Overview
-Pillow Talk is a private AI-powered relationship support platform designed for couples and individuals. It provides personalized, emotionally-aware guidance through separate conversations with each partner — helping them understand each other better, resolve conflicts, and grow closer without ever exposing one another’s private thoughts.
+Pillow Talk is a private AI-powered relationship support platform designed for couples and individuals. It provides personalized, emotionally-aware guidance through separate conversations with each partner — helping them understand each other better, resolve conflicts, and grow closer without ever exposing one another’s private thoughts .
 
 ## Table of Contents
 - [Overview](#overview)
